@@ -4,7 +4,7 @@ python caduceus/finetuning_glrb/main.py \
     --model_name "kuleshov-group/caduceus-ps_seqlen-131k_d_model-256_n_layer-16" \
     --bp_per_token 1 \
     --save_dir "output/" \
-    --wandb_api_key "<KEY>" \
+    --wandb_api_key "${WANDB_API_KEY}" \
     --name_wb "test_caduceus_vep" \
     --train_batch_size 1 \
     --test_batch_size 2 \
@@ -16,7 +16,8 @@ python caduceus/finetuning_glrb/main.py \
     --log_interval 4480 \
     --accumulate_grad_batches 64 \
     --train_ratio 1.0 \
-    --eval_ratio 1.0
+    --eval_ratio 1.0 \
+    --num_devices 1
 
 ##Examples
 

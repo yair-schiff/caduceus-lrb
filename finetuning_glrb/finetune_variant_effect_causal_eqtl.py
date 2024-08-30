@@ -549,7 +549,7 @@ def finetune(args):
         trainer = pl.Trainer(
             accelerator="cuda",
             max_epochs=args.num_epochs,
-            devices=1,
+            devices=args.num_devices,
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
             log_every_n_steps=1,
