@@ -12,31 +12,31 @@ import torch
 from src.utils.train import get_logger
 #from finetuning_glrb.finetune_variant_effect_pathogenic_clinvar import finetune as finetune_vep_clinvar
 #from finetuning_glrb.finetune_variant_effect_OMIM import finetune as main_omim
-from finetuning_glrb.finetune_variant_effect_causal_eqtl import finetune as finetune_vep_eqtl
+# from finetuning_glrb.finetune_variant_effect_causal_eqtl import finetune as finetune_vep_eqtl
 #from finetuning_glrb.finetune_bulk_rna import finetune as finetune_bulk_rna_expression
 #from finetuning_glrb.finetune_chromatin import finetune_histone_marks,finetune_dna_accessibility
-#from finetuning_glrb.finetune_regulatory_elements import finetune_enhancers, finetune_promoters
-#from finetuning_glrb.finetune_cage import finetune as finetune_cage
+from finetuning_glrb.finetune_regulatory_elements import finetune_enhancers, finetune_promoters
+# from finetuning_glrb.finetune_cage import finetune as finetune_cage
 
 log = get_logger(__name__)
 
 def main(opts):
     # Check if the value of args.task matches one of the predefined options
-    if opts.task == "variant_effect_causal_eqtl":
-        finetune_vep_eqtl(opts)
-    elif opts.task == "variant_effect_pathogenic_clinvar":
-        finetune_vep_clinvar(opts)
-    elif opts.task == "variant_effect_pathogenic_omim":
-        main_omim(opts)
-    elif opts.task == "bulk_rna_expression":
-        finetune_bulk_rna_expression(opts)
-    elif opts.task == "cage_prediction":
-        finetune_cage(opts)
-    elif opts.task == "chromatin_features_histone_marks":
-        finetune_histone_marks(opts)   
-    elif opts.task == "chromatin_features_dna_accessibility":
-        finetune_dna_accessibility(opts)    
-    elif opts.task == "regulatory_element_promoter":
+    # if opts.task == "variant_effect_causal_eqtl":
+    #     finetune_vep_eqtl(opts)
+    # elif opts.task == "variant_effect_pathogenic_clinvar":
+    #     finetune_vep_clinvar(opts)
+    # elif opts.task == "variant_effect_pathogenic_omim":
+    #     main_omim(opts)
+    # elif opts.task == "bulk_rna_expression":
+    #     finetune_bulk_rna_expression(opts)
+    # elif opts.task == "cage_prediction":
+    #     finetune_cage(opts)
+    # elif opts.task == "chromatin_features_histone_marks":
+    #     finetune_histone_marks(opts)
+    # elif opts.task == "chromatin_features_dna_accessibility":
+    #     finetune_dna_accessibility(opts)
+    if opts.task == "regulatory_element_promoter":
         finetune_promoters(opts)  
     elif opts.task == "regulatory_element_enhancer":
         finetune_enhancers(opts)
@@ -58,7 +58,7 @@ if __name__ == "__main__":
             "bulk_rna_expression",
             "chromatin_features_histone_marks",
             "chromatin_features_dna_accessibility",
-            "regulatory_element_promoter",
+                "regulatory_element_promoter",
             "regulatory_element_enhancer"
         ],
         required=True,

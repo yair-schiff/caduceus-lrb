@@ -2,15 +2,17 @@ import os
 from functools import partial
 from os import path as osp
 import re
+
+import datasets
 import torch
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader
 from transformers import AutoModelForMaskedLM, AutoModel, AutoTokenizer, AutoConfig
 import wandb
-import lightning.pytorch as pl
-from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from datasets import load_dataset, load_from_disk
 from sklearn.metrics import accuracy_score, precision_recall_curve, auc, roc_auc_score
 from transformers import DefaultDataCollator
@@ -170,8 +172,8 @@ class Lit_RegulatoryElements(pl.LightningModule):
 
         # Track predictions and labels for accuracy and F1 score
         preds = (torch.sigmoid(logits) > 0.5).float()  # Get predicted class labels
-        self.training_step_preds.extend(preds.detach().flatten().cpu().numpy())
-        self.training_step_labels.extend(labels.detach().flatten().cpu().numpy())
+        self.training_step_preds.extend(preds.detach().flatten().cpu().float().numpy())
+        self.training_step_labels.extend(labels.detach().flatten().cpu().float().numpy())
 
         return loss
 
@@ -185,8 +187,8 @@ class Lit_RegulatoryElements(pl.LightningModule):
 
         # Track predictions and labels for accuracy and F1 score
         preds = (torch.sigmoid(logits) > 0.5).float()  # Get predicted class labels
-        self.validation_step_preds.extend(preds.detach().flatten().cpu().numpy())
-        self.validation_step_labels.extend(labels.detach().flatten().cpu().numpy())
+        self.validation_step_preds.extend(preds.detach().flatten().cpu().float().numpy())
+        self.validation_step_labels.extend(labels.detach().flatten().cpu().float().numpy())
 
         return loss
     
@@ -197,8 +199,8 @@ class Lit_RegulatoryElements(pl.LightningModule):
         logits = self(ref_input_ids).squeeze(-1)
         #Track predictions and labels for accuracy and F1 score
         preds = (torch.sigmoid(logits) > 0.5).float()  # Get predicted class labels
-        self.validation_step_preds.extend(preds.detach().flatten().cpu().numpy())
-        self.validation_step_labels.extend(labels.detach().flatten().cpu().numpy())
+        self.validation_step_preds.extend(preds.detach().flatten().cpu().float().numpy())
+        self.validation_step_labels.extend(labels.detach().flatten().cpu().float().numpy())
 
     def on_validation_epoch_end(self):
         # Calculate accuracy, AUPRC, and AUROC for validation
@@ -289,12 +291,14 @@ class PromoterDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            self._download_and_preprocess_data()
+            return self._download_and_preprocess_data()
+        else:
+            return load_from_disk(self._get_preprocessed_cache_file())
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.prepare_data()
-        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.dataest = self.prepare_data()
+        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -332,14 +336,18 @@ class PromoterDataModule(pl.LightningDataModule):
     def _split_dataset(self,selected_validation_chromosome):
         log.warning(f"SPLITTING THE DATASET INTO TRAIN AND VAL SET, VAL SET BEING CHROMOSOME {selected_validation_chromosome}")
         self.train_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            != selected_validation_chromosome,
-            keep_in_memory=True,
+            lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
+            keep_in_memory = True,
+            batched = True,
+            batch_size = 1000,
+            num_proc = os.cpu_count()
         )
         self.val_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            == selected_validation_chromosome,
-            keep_in_memory=True,
+            lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
+            keep_in_memory = True,
+            batched = True,
+            batch_size = 1000,
+            num_proc = os.cpu_count()
         )
         self.validation_chromosome = selected_validation_chromosome
 
@@ -359,7 +367,8 @@ class PromoterDataModule(pl.LightningDataModule):
             sequence_length=self.seq_len,
             subset=True,
             load_from_cache=False,
-            trust_remote_code=True
+            trust_remote_code=True,
+            num_proc=os.cpu_count()
         )
         try:
             del dataset["validation"]  # Remove empty validation split if it exists
@@ -369,12 +378,14 @@ class PromoterDataModule(pl.LightningDataModule):
         # Process data: filter sequences with too many 'N's, recast chromosomes, and tokenize
         dataset = dataset.filter(
             lambda example: example["sequence"].count('N') < 0.005 * self.seq_len,
-            desc="Filter N's"
+            desc="Filter N's",
+            num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             recast_chromosome,
             remove_columns=["chromosome"],
-            desc="Recast chromosome"
+            desc="Recast chromosome",
+            num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             partial(tokenize_variants, tokenizer=self.tokenizer, max_length=self.seq_len//self.bp_per_token),
@@ -382,12 +393,13 @@ class PromoterDataModule(pl.LightningDataModule):
             batched=True,
             remove_columns=["sequence"],
             desc="Tokenize",
-            num_proc=self.num_workers
+            num_proc=os.cpu_count()
         )
 
         # Save processed dataset to disk
-        dataset.save_to_disk(self._get_preprocessed_cache_file())
-        log.warning("Data downloaded and preprocessed successfully.")
+        return dataset
+        # dataset.save_to_disk(self._get_preprocessed_cache_file())
+        # log.warning("Data downloaded and preprocessed successfully.")
 
 class EnhancerDataModule(pl.LightningDataModule):
     """
@@ -418,15 +430,17 @@ class EnhancerDataModule(pl.LightningDataModule):
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, trust_remote_code=True)
 
-    def prepare_data(self):
+    def prepare_data(self) -> datasets.Dataset:
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            self._download_and_preprocess_data()
+            return self._download_and_preprocess_data()
+        else:
+            return load_from_disk(self._get_preprocessed_cache_file())
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.prepare_data()
-        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.dataset = self.prepare_data()
+        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -464,14 +478,18 @@ class EnhancerDataModule(pl.LightningDataModule):
     def _split_dataset(self,selected_validation_chromosome):
         log.warning(f"SPLITTING THE DATASET INTO TRAIN AND VAL SET, VAL SET BEING CHROMOSOME {selected_validation_chromosome}")
         self.train_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            != selected_validation_chromosome,
+            lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
             keep_in_memory=True,
+            batched=True,
+            batch_size=1000,
+            num_proc=os.cpu_count()
         )
         self.val_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            == selected_validation_chromosome,
+            lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
             keep_in_memory=True,
+            batched=True,
+            batch_size=1000,
+            num_proc=os.cpu_count()
         )
         self.validation_chromosome = selected_validation_chromosome
 
@@ -491,7 +509,8 @@ class EnhancerDataModule(pl.LightningDataModule):
             sequence_length=self.seq_len,
             subset=True,
             load_from_cache=False,
-            trust_remote_code=True
+            trust_remote_code=True,
+            num_proc=os.cpu_count()
         )
         try:
             del dataset["validation"]  # Remove empty validation split if it exists
@@ -501,12 +520,14 @@ class EnhancerDataModule(pl.LightningDataModule):
         # Process data: filter sequences with too many 'N's, recast chromosomes, and tokenize
         dataset = dataset.filter(
             lambda example: example["sequence"].count('N') < 0.005 * self.seq_len,
-            desc="Filter N's"
+            desc="Filter N's",
+            num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             recast_chromosome,
             remove_columns=["chromosome"],
-            desc="Recast chromosome"
+            desc="Recast chromosome",
+            num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             partial(tokenize_variants, tokenizer=self.tokenizer, max_length=self.seq_len//self.bp_per_token),
@@ -514,11 +535,12 @@ class EnhancerDataModule(pl.LightningDataModule):
             batched=True,
             remove_columns=["sequence"],
             desc="Tokenize",
-            num_proc=self.num_workers
+            num_proc=os.cpu_count()
         )
 
         # Save processed dataset to disk
-        dataset.save_to_disk(self._get_preprocessed_cache_file())
+        # dataset.save_to_disk(self._get_preprocessed_cache_file())
+        return dataset
         log.warning("Data downloaded and preprocessed successfully.")
 
 def finetune_promoters(args):
@@ -559,8 +581,9 @@ def finetune_promoters(args):
 
         # Set up the PyTorch Lightning Trainer
         trainer = pl.Trainer(
+            accelerator="cuda",
             max_epochs=args.num_epochs,
-            devices=nb_device,
+            devices=args.num_devices,
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
             log_every_n_steps=1,
@@ -568,7 +591,7 @@ def finetune_promoters(args):
             limit_val_batches=args.eval_ratio,
             val_check_interval=args.log_interval,
             gradient_clip_val=1.0,
-            precision=args.precision,
+            precision="bf16",
             accumulate_grad_batches=args.accumulate_grad_batches,
             num_sanity_val_steps=0
         )
@@ -619,8 +642,9 @@ def finetune_enhancers(args):
 
         # Set up the PyTorch Lightning Trainer
         trainer = pl.Trainer(
+            accelerator="cuda",
             max_epochs=args.num_epochs,
-            devices=nb_device,
+            devices=args.num_devices,
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
             log_every_n_steps=1,
@@ -628,7 +652,7 @@ def finetune_enhancers(args):
             limit_val_batches=args.eval_ratio,
             val_check_interval=args.log_interval,
             gradient_clip_val=1.0,
-            precision=args.precision,
+            precision="bf16",
             accumulate_grad_batches=args.accumulate_grad_batches,
             num_sanity_val_steps=0
         )
