@@ -331,20 +331,19 @@ class HistoneMarksDataModule(pl.LightningDataModule):
     def _split_dataset(self,selected_validation_chromosome):
         log.warning(f"SPLITTING THE DATASET INTO TRAIN AND VAL SET, VAL SET BEING CHROMOSOME {selected_validation_chromosome}")
         self.train_dataset = self.dataset["train"].filter(
-            lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
-            # lambda example: example["chromosome"] != selected_validation_chromosome,
+            # lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
+            lambda example: example["chromosome"] != selected_validation_chromosome,
             keep_in_memory=True,
-            batched=True,
-            batch_size=1000,
-            num_proc=os.cpu_count()
+            # batched=True,
+            # batch_size=1000,
         )
         self.val_dataset = self.dataset["train"].filter(
-            lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
-            # lambda example: example["chromosome"] == selected_validation_chromosome,
+            # lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
+            lambda example: example["chromosome"] == selected_validation_chromosome,
             keep_in_memory=True,
-            batched=True,
-            batch_size=1000,
-            num_proc=os.cpu_count()
+            # batched=True,
+            # batch_size=1000,
+            # num_proc=os.cpu_count()
         )
         self.validation_chromosome = selected_validation_chromosome
 
@@ -473,20 +472,20 @@ class DNAAccessibilityDataModule(pl.LightningDataModule):
     def _split_dataset(self,selected_validation_chromosome):
         log.warning(f"SPLITTING THE DATASET INTO TRAIN AND VAL SET, VAL SET BEING CHROMOSOME {selected_validation_chromosome}")
         self.train_dataset = self.dataset["train"].filter(
-            lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
-            # lambda example: example["chromosome"] != selected_validation_chromosome,
+            # lambda examples: [c != selected_validation_chromosome for c in examples["chromosome"]],
+            lambda example: example["chromosome"] != selected_validation_chromosome,
             keep_in_memory=True,
-            batched=True,
-            batch_size=1000,
-            num_proc=os.cpu_count()
+            # batched=True,
+            # batch_size=1000,
+            # num_proc=os.cpu_count()
         )
         self.val_dataset = self.dataset["train"].filter(
-            lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
-            # lambda example: example["chromosome"] == selected_validation_chromosome,
+            # lambda examples: [c == selected_validation_chromosome for c in examples["chromosome"]],
+            lambda example: example["chromosome"] == selected_validation_chromosome,
             keep_in_memory=True,
-            batched=True,
-            batch_size=1000,
-            num_proc=os.cpu_count()
+            # batched=True,
+            # batch_size=1000,
+            # num_proc=os.cpu_count()
         )
         self.validation_chromosome = selected_validation_chromosome
 
