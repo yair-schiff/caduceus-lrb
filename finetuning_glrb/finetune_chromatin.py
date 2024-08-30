@@ -365,7 +365,6 @@ class HistoneMarksDataModule(pl.LightningDataModule):
             subset=True,
             load_from_cache=False,
             trust_remote_code=True,
-            num_proc=os.cpu_count()
         )
         try:
             del dataset["validation"]  # Remove empty validation split if it exists
@@ -508,7 +507,6 @@ class DNAAccessibilityDataModule(pl.LightningDataModule):
             subset=True,
             load_from_cache=False,
             trust_remote_code=True,
-            num_proc=os.cpu_count()
         )
         try:
             del dataset["validation"]  # Remove empty validation split if it exists
