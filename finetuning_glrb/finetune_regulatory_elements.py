@@ -291,14 +291,12 @@ class PromoterDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            return self._download_and_preprocess_data()
-        else:
-            return load_from_disk(self._get_preprocessed_cache_file())
+            self._download_and_preprocess_data()
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.dataest = self.prepare_data()
-        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.prepare_data()
+        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -398,9 +396,8 @@ class PromoterDataModule(pl.LightningDataModule):
         )
 
         # Save processed dataset to disk
-        return dataset
-        # dataset.save_to_disk(self._get_preprocessed_cache_file())
-        # log.warning("Data downloaded and preprocessed successfully.")
+        dataset.save_to_disk(self._get_preprocessed_cache_file())
+        log.warning("Data downloaded and preprocessed successfully.")
 
 class EnhancerDataModule(pl.LightningDataModule):
     """
@@ -431,17 +428,15 @@ class EnhancerDataModule(pl.LightningDataModule):
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name, trust_remote_code=True)
 
-    def prepare_data(self) -> datasets.Dataset:
+    def prepare_data(self):
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            return self._download_and_preprocess_data()
-        else:
-            return load_from_disk(self._get_preprocessed_cache_file())
+            self._download_and_preprocess_data()
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.dataset = self.prepare_data()
-        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.prepare_data()
+        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -541,8 +536,7 @@ class EnhancerDataModule(pl.LightningDataModule):
         )
 
         # Save processed dataset to disk
-        # dataset.save_to_disk(self._get_preprocessed_cache_file())
-        return dataset
+        dataset.save_to_disk(self._get_preprocessed_cache_file())
         log.warning("Data downloaded and preprocessed successfully.")
 
 def finetune_promoters(args):
