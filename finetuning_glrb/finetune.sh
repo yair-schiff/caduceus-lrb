@@ -1,20 +1,20 @@
-python finetuning_glrb/main.py \
-    --task "bulk_rna_expression" \
-    --seq_len 12000 \
-    --model_name "your_model_name_from_the_hub" \
-    --bp_per_token TBD \
+python caduceus/finetuning_glrb/main.py \
+    --task "variant_effect_causal_eqtl" \
+    --seq_len 131072 \
+    --model_name "kuleshov-group/caduceus-ps_seqlen-131k_d_model-256_n_layer-16" \
+    --bp_per_token 1 \
     --save_dir "output/" \
-    --wandb_api_key "your_wandb_api_key" \
-    --name_wb "your_wandb_run_name" \
-    --train_batch_size 4 \
-    --test_batch_size 4 \
+    --wandb_api_key "<KEY>" \
+    --name_wb "test_caduceus_vep" \
+    --train_batch_size 1 \
+    --test_batch_size 2 \
     --rcps true \
-    --num_workers 6 \
+    --num_workers 1 \
     --num_epochs 1 \
     --precision "16-mixed" \
-    --learning_rate "3e-5" \
-    --log_interval 512 \
-    --accumulate_grad_batches 128 \
+    --learning_rate "1e-5" \
+    --log_interval 4480 \
+    --accumulate_grad_batches 64 \
     --train_ratio 1.0 \
     --eval_ratio 1.0
 

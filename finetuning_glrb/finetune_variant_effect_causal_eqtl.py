@@ -8,9 +8,9 @@ import numpy as np
 from torch.utils.data import DataLoader, Dataset
 from transformers import AutoModelForMaskedLM, AutoModel, AutoTokenizer, AutoConfig
 import wandb
-import lightning.pytorch as pl
-from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 import numpy as np
 from datasets import load_dataset, load_from_disk
 from sklearn import preprocessing
@@ -435,16 +435,25 @@ class VariantEffectPredictionDataModule(pl.LightningDataModule):
     def _split_dataset(self,selected_validation_chromosome):
         log.warning(f"SPLITTING THE DATASET INTO TRAIN AND VAL SET, VAL SET BEING CHROMOSOME {selected_validation_chromosome}")
         self.train_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            != selected_validation_chromosome,
+            lambda example: [c != selected_validation_chromosome for c in example["chromosome"]],
+            #lambda example: example["chromosome"]
+            #== selected_validation_chromosome,
             keep_in_memory=True,
+            batch_size=1000,
+            batched=True,
+            num_proc=os.cpu_count(),
         )
         self.val_dataset = self.dataset["train"].filter(
-            lambda example: example["chromosome"]
-            == selected_validation_chromosome,
+            lambda example: [c == selected_validation_chromosome for c in example["chromosome"]],
+            #lambda example: example["chromosome"]
+            #== selected_validation_chromosome,
             keep_in_memory=True,
+            batch_size=1000,
+            batched=True,
+            num_proc=os.cpu_count(),
         )
         self.validation_chromosome = selected_validation_chromosome
+        print("****** HERE!!!! ******")
 
     def _get_preprocessed_cache_file(self):
         cache_dir = osp.join(
@@ -483,9 +492,9 @@ class VariantEffectPredictionDataModule(pl.LightningDataModule):
             batched=True,
             remove_columns=["ref_forward_sequence", "alt_forward_sequence"],
             desc="Tokenize",
-            num_proc=self.num_workers
+            num_proc=os.cpu_count(),  # self.num_workers
         )
-        dataset = dataset.map(find_variant_idx, desc="Find variant idx")
+        dataset = dataset.map(find_variant_idx, desc="Find variant idx", num_proc=os.cpu_count())
 
         label_encoder = preprocessing.LabelEncoder()
         label_encoder.fit(dataset["test"]["tissue"])
@@ -538,8 +547,9 @@ def finetune(args):
 
         # Set up the PyTorch Lightning Trainer
         trainer = pl.Trainer(
+            accelerator="cuda",
             max_epochs=args.num_epochs,
-            devices=nb_device,
+            devices=1,
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
             log_every_n_steps=1,
@@ -547,7 +557,7 @@ def finetune(args):
             limit_val_batches=args.eval_ratio,
             val_check_interval=args.log_interval,
             gradient_clip_val=1.0,
-            precision=args.precision,
+            precision="bf16", #args.precision,
             accumulate_grad_batches=args.accumulate_grad_batches,
             num_sanity_val_steps=0
         )

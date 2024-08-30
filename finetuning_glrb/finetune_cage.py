@@ -15,9 +15,9 @@ from transformers import (
 )
 import numpy as np
 import wandb
-import lightning.pytorch as pl
-from lightning.pytorch.loggers import WandbLogger
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
+import pytorch_lightning as pl
+from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from datasets import load_dataset, load_from_disk
 from sklearn.metrics import r2_score
 from src.utils.train import get_logger
@@ -190,8 +190,8 @@ class Lit_DNAModelForCAGE(pl.LightningModule):
         self.log('train_loss', loss, on_epoch=True, on_step=True, sync_dist=True)
         
         # Track predictions and labels for R² score
-        self.training_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().numpy())
-        self.training_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().numpy())
+        self.training_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().float().numpy())
+        self.training_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().float().numpy())
 
         return loss
     
@@ -204,8 +204,8 @@ class Lit_DNAModelForCAGE(pl.LightningModule):
         self.log('val_loss', loss, on_epoch=True, on_step=True, sync_dist=True)
 
         # Track predictions and labels for R² score
-        self.validation_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().numpy())
-        self.validation_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().numpy())
+        self.validation_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().float().numpy())
+        self.validation_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().float().numpy())
 
         return loss
     
@@ -216,8 +216,8 @@ class Lit_DNAModelForCAGE(pl.LightningModule):
         logits = self.model(ref_input_ids)
 
         # Track predictions and labels for R² score
-        self.validation_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().numpy())
-        self.validation_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().numpy())
+        self.validation_step_preds.extend(logits.view(-1, logits.size(-1)).detach().cpu().float().numpy())
+        self.validation_step_labels.extend(labels.view(-1, labels.size(-1)).detach().cpu().float().numpy())
 
     def on_validation_epoch_end(self):
         #Log(1+x) normalize the preds and labels
@@ -334,10 +334,16 @@ class CAGEDataModule(pl.LightningDataModule):
             lambda example: example["chromosome"]
             != selected_validation_chromosome,
             keep_in_memory=True,
+            batch_size=1000,
+            batched=True,
+            num_proc=os.cpu_count()
         )
         self.val_dataset = self.dataset["train"].filter(
             lambda example: example["chromosome"]
             == selected_validation_chromosome,
+            batch_size=1000,
+            batched=True,
+            num_proc=os.cpu_count()
             keep_in_memory=True,
         )
         self.validation_chromosome = selected_validation_chromosome
@@ -382,7 +388,7 @@ class CAGEDataModule(pl.LightningDataModule):
             batched=True,
             remove_columns=["sequence"],
             desc="Tokenize",
-            num_proc=self.num_workers
+            num_proc=os.cpu_count()
         )
 
         # Save processed dataset to disk
@@ -431,7 +437,8 @@ def finetune(args):
         # Set up the PyTorch Lightning Trainer
         trainer = pl.Trainer(
             max_epochs=args.num_epochs,
-            devices=nb_device,
+            devices=1,
+            accelerator="cuda",
             logger=wandb_logger,
             callbacks=[checkpoint_callback],
             log_every_n_steps=1,
@@ -439,7 +446,7 @@ def finetune(args):
             limit_val_batches=args.eval_ratio,
             val_check_interval=args.log_interval,
             gradient_clip_val=1.0,
-            precision=args.precision,
+            precision="bf16",
             accumulate_grad_batches=args.accumulate_grad_batches,
             num_sanity_val_steps=0
         )

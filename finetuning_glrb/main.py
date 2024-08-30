@@ -10,13 +10,13 @@ import torch
 
 
 from src.utils.train import get_logger
-from finetuning_glrb.finetune_variant_effect_pathogenic_clinvar import finetune as finetune_vep_clinvar
-from finetuning_glrb.finetune_variant_effect_OMIM import finetune as main_omim
+#from finetuning_glrb.finetune_variant_effect_pathogenic_clinvar import finetune as finetune_vep_clinvar
+#from finetuning_glrb.finetune_variant_effect_OMIM import finetune as main_omim
 from finetuning_glrb.finetune_variant_effect_causal_eqtl import finetune as finetune_vep_eqtl
-from finetuning_glrb.finetune_bulk_rna import finetune as finetune_bulk_rna_expression
-from finetuning_glrb.finetune_chromatin import finetune_histone_marks,finetune_dna_accessibility
-from finetuning_glrb.finetune_regulatory_elements import finetune_enhancers, finetune_promoters
-from finetuning_glrb.finetune_cage import finetune as finetune_cage
+#from finetuning_glrb.finetune_bulk_rna import finetune as finetune_bulk_rna_expression
+#from finetuning_glrb.finetune_chromatin import finetune_histone_marks,finetune_dna_accessibility
+#from finetuning_glrb.finetune_regulatory_elements import finetune_enhancers, finetune_promoters
+#from finetuning_glrb.finetune_cage import finetune as finetune_cage
 
 log = get_logger(__name__)
 
