@@ -58,7 +58,7 @@ if __name__ == "__main__":
             "bulk_rna_expression",
             "chromatin_features_histone_marks",
             "chromatin_features_dna_accessibility",
-                "regulatory_element_promoter",
+            "regulatory_element_promoter",
             "regulatory_element_enhancer"
         ],
         required=True,
