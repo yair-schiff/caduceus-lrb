@@ -286,14 +286,12 @@ class HistoneMarksDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            return self._download_and_preprocess_data()
-        else:
-            return load_dataset(self._get_preprocessed_cache_file())
+            self._download_and_preprocess_data()
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.dataset = self.prepare_data()
-        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.prepare_data()
+        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -390,8 +388,7 @@ class HistoneMarksDataModule(pl.LightningDataModule):
         )
 
         # Save processed dataset to disk
-        return dataset
-        # dataset.save_to_disk(self._get_preprocessed_cache_file())
+        dataset.save_to_disk(self._get_preprocessed_cache_file())
         log.warning("Data downloaded and preprocessed successfully.")
 
 class DNAAccessibilityDataModule(pl.LightningDataModule):
@@ -426,14 +423,12 @@ class DNAAccessibilityDataModule(pl.LightningDataModule):
     def prepare_data(self):
         # Download and preprocess data if not already done
         if not fsspec_exists(self._get_preprocessed_cache_file()):
-            return self._download_and_preprocess_data()
-        else:
-            return load_dataset(self._get_preprocessed_cache_file())
+            self._download_and_preprocess_data()
 
     def setup(self, stage=None):
         # Load the preprocessed dataset
-        self.dataset = self.prepare_data()
-        # self.dataset = load_from_disk(self._get_preprocessed_cache_file())
+        self.prepare_data()
+        self.dataset = load_from_disk(self._get_preprocessed_cache_file())
 
         # Split the dataset into train and validation sets
         self.test_dataset = self.dataset["test"]
@@ -532,8 +527,7 @@ class DNAAccessibilityDataModule(pl.LightningDataModule):
         )
 
         # Save processed dataset to disk
-        return dataset
-        # dataset.save_to_disk(self._get_preprocessed_cache_file())
+        dataset.save_to_disk(self._get_preprocessed_cache_file())
         log.warning("Data downloaded and preprocessed successfully.")
 
 
