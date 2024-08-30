@@ -379,13 +379,13 @@ class PromoterDataModule(pl.LightningDataModule):
         dataset = dataset.filter(
             lambda example: example["sequence"].count('N') < 0.005 * self.seq_len,
             desc="Filter N's",
-            num_proc=os.cpu_count()
+            # num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             recast_chromosome,
             remove_columns=["chromosome"],
             desc="Recast chromosome",
-            num_proc=os.cpu_count()
+            # num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             partial(tokenize_variants, tokenizer=self.tokenizer, max_length=self.seq_len//self.bp_per_token),
@@ -521,13 +521,13 @@ class EnhancerDataModule(pl.LightningDataModule):
         dataset = dataset.filter(
             lambda example: example["sequence"].count('N') < 0.005 * self.seq_len,
             desc="Filter N's",
-            num_proc=os.cpu_count()
+            # num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             recast_chromosome,
             remove_columns=["chromosome"],
             desc="Recast chromosome",
-            num_proc=os.cpu_count()
+            # num_proc=os.cpu_count()
         )
         dataset = dataset.map(
             partial(tokenize_variants, tokenizer=self.tokenizer, max_length=self.seq_len//self.bp_per_token),
