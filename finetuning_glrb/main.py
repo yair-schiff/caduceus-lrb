@@ -77,6 +77,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers.")
     parser.add_argument("--rcps", type=bool, default=False, help="Using rcps when extracting embeddings or not.")
     parser.add_argument("--num_epochs", type=int, default=1, help="Number of epochs to train.")
+    parser.add_argument("--num_devices", type=int, default=1, help="Number of devices.")
     parser.add_argument(
         "--precision",
         type=str,
